@@ -30,7 +30,7 @@ class GradientScaffold extends StatelessWidget {
         ),
         // Varsinainen sisältö läpikuultavalla scaffoldilla
         Scaffold(
-          backgroundColor: Colors.black.withOpacity(0.08),
+          backgroundColor: Colors.black.withValues(alpha:0.08),
           appBar: appBar,
           body: body,
           bottomNavigationBar: bottomBar,

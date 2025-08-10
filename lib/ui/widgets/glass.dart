@@ -30,7 +30,7 @@ class Glass extends StatelessWidget {
             child: Container(
               padding: padding,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(opacity),
+                color: Colors.white.withValues(alpha: opacity),
                 borderRadius: BorderRadius.circular(radius),
                 border: Border.all(color: AppColors.glassBorder(context), width: 1),
               ),
@@ -45,8 +45,8 @@ class Glass extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.white.withOpacity(0.16),
-                      Colors.white.withOpacity(0.00),
+                      Colors.white.withValues(alpha:0.16),
+                      Colors.white.withValues(alpha:0.00),
                     ],
                   ),
                 ),
