@@ -30,3 +30,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/seed.json
+  fonts:
+    - family: CanavaGrotesk
+      fonts:
+        - asset: assets/fonts/CanavaGrotesk-Regular.otf
