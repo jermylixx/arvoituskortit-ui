@@ -17,6 +17,7 @@ dependencies:
   share_plus: ^10.0.2
   drift: ^2.18.0
   sqlite3_flutter_libs: ^0.5.26
+  flutter_shaders: ^0.1.3
 
 
 dev_dependencies:
@@ -30,6 +31,9 @@ flutter:
   uses-material-design: true
   assets:
     - assets/seed.json
+  shaders:
+    - assets/shaders/smoke_background.frag
+    - assets/shaders/glass_refract.frag
   fonts:
     - family: CanavaGrotesk
       fonts:
