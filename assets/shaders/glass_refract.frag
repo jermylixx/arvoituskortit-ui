@@ -1,42 +1,84 @@
-#version 460 core
+#version 300 es
 precision highp float;
 
-layout(location = 0) out vec4 fragColor;
+// Flutter runtime header (required by flutter_shaders)
+#include <flutter/runtime_effect.glsl>
 
-/* Float-uniformit: indeksit 0.. */
-layout(location = 0) uniform vec2  u_resolution;  // (w,h)
-layout(location = 2) uniform float u_time;        // sekunteja
-layout(location = 3) uniform float u_refract;     // 0..1 refraktion voimakkuus
-layout(location = 4) uniform float u_gloss;       // 0..1 kiillon voimakkuus
+// Uniform order matches setFloat indices in Dart:
+// 0: width, 1: height, 2: time, 3: refract, 4: gloss
+uniform float uWidth;
+uniform float uHeight;
+uniform float uTime;
+uniform float uRefract;  // 0.0 – 1.5
+uniform float uGloss;    // 0.0 – 1.0
 
-/* Samplerille EI layout-qualifieria Impellerissa */
-uniform sampler2D u_tex;
+// Background image captured from RepaintBoundary
+uniform sampler2D uTex0; // setImageSampler(0, background)
+
+out vec4 fragColor;
+
+// Simple hash-based value noise (cheap, no diagonal banding)
+float hash(vec2 p) {
+  p = fract(p * vec2(123.34, 345.45));
+  p += dot(p, p + 34.345);
+  return fract(p.x * p.y);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = hash(i);
+  float b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0));
+  float d = hash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+vec2 swirl(vec2 uv, float t) {
+  // subtle animated micro-distortion to avoid perfectly static glass
+  float n = noise(uv * 3.5 + t * 0.05);
+  float a = (n - 0.5) * 0.02; // very tiny
+  return uv + vec2(cos(a), sin(a)) * (n - 0.5) * 0.003;
+}
 
 void main() {
-  vec2 res = u_resolution;
-  vec2 uv  = gl_FragCoord.xy / res;
+  vec2 frag = FlutterFragCoord().xy;
+  vec2 res = vec2(uWidth, uHeight);
+  vec2 uv = frag / res;
 
-  // Linssin keskipiste ruudun keskellä (kortti piirtää tämän omaan local-rectiin)
-  vec2 center = vec2(0.5, 0.5);
-  vec2 p = uv - center;
-  float r = length(p);
+  // Distance to nearest edge (0 at edge, ~0.5 at center)
+  float d = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));
 
-  // Paksu linssi: pehmeä “bump”-profiili, säätö rauhallinen
-  float bump = smoothstep(0.95, 0.0, r); // 0 keskellä -> 1 reunoilla
-  vec2 refr = normalize(p) * (u_refract * 0.025 * bump);
+  // Edge emphasis: 1.0 at very edge, 0.0 at center
+  float edge = 1.0 - smoothstep(0.02, 0.14, d);
 
-  // Näyte taustasta refraktion siirrolla
-  vec4 col = texture(u_tex, uv + refr);
+  // Refract direction from center outwards
+  vec2 fromCenter = uv - 0.5;
+  vec2 dir = normalize(fromCenter + 1e-6);
 
-  // Reunavalo + sisävarjo lisää paksuutta
-  float edge = smoothstep(0.88, 0.60, r);
-  col.rgb *= mix(1.0, 0.92, edge);   // sisävarjo
-  col.rgb += edge * 0.06;            // reunavalo
+  // Edge-weighted refraction amount, tiny in the center, stronger at edges
+  float refrAmt = uRefract * (0.006 * edge + 0.001);
 
-  // Leveä, lähes huomaamaton kiilto diagonaalisesti
-  vec2 glossDir = normalize(vec2(0.8, -0.6));
-  float band = 1.0 - smoothstep(0.0, 0.35, abs(dot(glossDir, p) * 2.0));
-  col.rgb += u_gloss * band * 0.10;
+  // Add faint organic wobble to avoid "perfect pane" look
+  vec2 uvDistorted = swirl(uv, uTime) + dir * refrAmt;
 
-  fragColor = col;
+  // Sample the background with refraction, clamp to avoid sampling outside
+  uvDistorted = clamp(uvDistorted, vec2(0.0), vec2(1.0));
+  vec4 bg = texture(uTex0, uvDistorted);
+
+  // Subtle violet tint, almost transparent
+  vec3 violet = vec3(0.64, 0.40, 0.95);
+  float tintAmount = 0.06; // very light
+  vec3 tinted = mix(bg.rgb, mix(bg.rgb, violet, tintAmount), 0.5);
+
+  // Fresnel-ish edge brightening for thin glass edge perception
+  float fresnel = pow(1.0 - clamp(length(fromCenter) * 1.6, 0.0, 1.0), 2.0);
+  float edgeLight = edge * (0.06 + 0.10 * uGloss) * (1.0 - fresnel);
+  tinted += edgeLight;
+
+  // Final alpha: nearly invisible at center, slightly stronger at edges
+  float alpha = mix(0.06, 0.14, edge);
+
+  fragColor = vec4(tinted, alpha);
 }
