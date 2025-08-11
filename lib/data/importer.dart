@@ -1,3 +1,8 @@
+// GENERATED: JSON importer/exporter borrowed from the upstream repository.
+// Allows loading and saving card data as JSON.  See the original file for
+// detailed documentation.  This file is used by the settings page to
+// implement import/export actions.
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -41,7 +46,7 @@ class Importer {
       return;
     }
 
-    final canOverwrite = isBaseline && !existing.isModified && !existing.isUserAdded;
+    final canOverwrite = isBaseline && !(existing.isModified ?? false) && !(existing.isUserAdded ?? false);
 
     if (canOverwrite) {
       await db.upsertCard(CardsCompanion(
@@ -93,10 +98,14 @@ class Importer {
 
   String _mimeToExt(String mime) {
     switch (mime) {
-      case 'image/jpeg': return 'jpg';
-      case 'image/gif':  return 'gif';
-      case 'image/webp': return 'webp';
-      default:           return 'png';
+      case 'image/jpeg':
+        return 'jpg';
+      case 'image/gif':
+        return 'gif';
+      case 'image/webp':
+        return 'webp';
+      default:
+        return 'png';
     }
   }
 
@@ -107,7 +116,6 @@ class Importer {
     for (final c in rows) {
       final qPics = picsFromDbJson(c.questionPics);
       final aPics = picsFromDbJson(c.answerPics);
-
       final qOut = <PicRef>[];
       for (final pRef in qPics) {
         if (pRef.type == 'file') {
@@ -120,7 +128,6 @@ class Importer {
           qOut.add(pRef);
         }
       }
-
       final aOut = <PicRef>[];
       for (final pRef in aPics) {
         if (pRef.type == 'file') {
@@ -133,7 +140,6 @@ class Importer {
           aOut.add(pRef);
         }
       }
-
       items.add({
         "pair_id": c.id,
         "question": c.question,
@@ -143,8 +149,11 @@ class Importer {
         "answer_pics": aOut.map((e) => e.toJson()).toList(),
       });
     }
-
-    final out = {"pairs": items, "dataset_name": "export", "dataset_version": DateTime.now().millisecondsSinceEpoch};
+    final out = {
+      "pairs": items,
+      "dataset_name": "export",
+      "dataset_version": DateTime.now().millisecondsSinceEpoch,
+    };
     return const JsonEncoder.withIndent('  ').convert(out);
   }
 }

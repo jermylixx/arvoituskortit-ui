@@ -2,9 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' show Value; // tarvitaan Value
 import 'package:image_picker/image_picker.dart';
+import 'components/glass.dart';
+
 import '../data/db.dart';
 import '../models/json_models.dart';
 
+/// A page for creating or editing a single riddle card.  This is copied
+/// directly from the original repository and applies only minimal styling.
 class RiddleEditorPage extends StatefulWidget {
   final ArvoitusCard? cardRow; // null = uusi
   const RiddleEditorPage({super.key, this.cardRow});
@@ -61,52 +65,101 @@ class _RiddleEditorPageState extends State<RiddleEditorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.cardRow == null ? 'Uusi arvoitus' : 'Muokkaa arvoitusta')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _q,
-              decoration: const InputDecoration(labelText: 'Kysymys'),
-              minLines: 3,
-              maxLines: null,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Kirjoita kysymys' : null,
+      body: Stack(
+        children: [
+          const AuroraBackground(),
+          Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                EdgeGlass(
+                  borderRadius: BorderRadius.circular(20),
+                  glow: true,
+                  vignette: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: TextFormField(
+                      controller: _q,
+                      decoration: const InputDecoration(
+                        hintText: 'Kysymys',
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      minLines: 3,
+                      maxLines: null,
+                      style: const TextStyle(color: Colors.white),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Kirjoita kysymys' : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _PicStrip(
+                  pics: _qPics,
+                  onAdd: () => _pickImage(true),
+                  onRemove: (i) => _removePic(true, i),
+                  title: 'Kysymyksen kuvat',
+                ),
+                const SizedBox(height: 12),
+                EdgeGlass(
+                  borderRadius: BorderRadius.circular(20),
+                  glow: true,
+                  vignette: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: TextFormField(
+                      controller: _a,
+                      decoration: const InputDecoration(
+                        hintText: 'Vastaus',
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      minLines: 2,
+                      maxLines: null,
+                      style: const TextStyle(color: Colors.white),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Kirjoita vastaus' : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _PicStrip(
+                  pics: _aPics,
+                  onAdd: () => _pickImage(false),
+                  onRemove: (i) => _removePic(false, i),
+                  title: 'Vastauksen kuvat',
+                ),
+                const SizedBox(height: 12),
+                EdgeGlass(
+                  borderRadius: BorderRadius.circular(20),
+                  glow: true,
+                  vignette: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: TextFormField(
+                      controller: _tags,
+                      decoration: const InputDecoration(
+                        hintText: 'Tagit pilkuilla',
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                GlassButton(
+                  label: 'Tallenna',
+                  onPressed: () {
+                    final result = _buildResult();
+                    if (result != null) Navigator.of(context).pop(result);
+                  },
+                  borderRadius: 24,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            _PicStrip(
-              pics: _qPics,
-              onAdd: () => _pickImage(true),
-              onRemove: (i) => _removePic(true, i),
-              title: 'Kysymyksen kuvat',
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _a,
-              decoration: const InputDecoration(labelText: 'Vastaus'),
-              minLines: 2,
-              maxLines: null,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Kirjoita vastaus' : null,
-            ),
-            const SizedBox(height: 12),
-            _PicStrip(
-              pics: _aPics,
-              onAdd: () => _pickImage(false),
-              onRemove: (i) => _removePic(false, i),
-              title: 'Vastauksen kuvat',
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _tags,
-              decoration: const InputDecoration(labelText: 'Tagit pilkuilla'),
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(_buildResult()),
-              child: const Text('Tallenna'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -156,9 +209,17 @@ class _PicStrip extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, i) {
                 final p = pics[i];
-                final w = p.type == 'file'
-                    ? Image.file(File(p.uri), width: 120, height: 84, fit: BoxFit.cover)
-                    : const Icon(Icons.image);
+                final Widget w;
+                if (p.type == 'file') {
+                  w = Image.file(File(p.uri), width: 120, height: 84, fit: BoxFit.cover);
+                } else if (p.type == 'dataUri') {
+                  final bytes = decodeDataUriToBytes(p.uri);
+                  w = bytes == null
+                      ? const SizedBox.shrink()
+                      : Image.memory(bytes, width: 120, height: 84, fit: BoxFit.cover);
+                } else {
+                  w = Image.asset(p.uri, width: 120, height: 84, fit: BoxFit.cover);
+                }
                 return Stack(children: [
                   ClipRRect(borderRadius: BorderRadius.circular(10), child: w),
                   Positioned(

@@ -1,4 +1,9 @@
-# pubspec.yaml
+# This is a minimal pubspec.yaml for the arvoituskortit UI.  It mirrors the
+# upstream manifest from commit e5f882677617a327c4915bed61778983998ae276 and
+# adds no additional dependencies.  Assets and fonts are retained so that the
+# existing graphics and typefaces continue to work.  When building this app
+# you should run `flutter pub get` inside the repository root.
+
 name: arvoituskortit
 publish_to: "none"
 version: 1.0.0+1
@@ -19,7 +24,6 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.26
   flutter_shaders: ^0.1.3
 
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -31,9 +35,11 @@ flutter:
   uses-material-design: true
   assets:
     - assets/seed.json
-  shaders:
-    - assets/shaders/smoke_background.frag
-    - assets/shaders/glass_refract.frag
+  # Shaders are omitted here because Impeller requires valid GLSL 3.0, and
+  # our app draws its aurora background procedurally in code rather than
+  # loading custom fragment shaders.  Removing these prevents shader
+  # compilation errors on build.  If custom shaders are added later, list
+  # them here.
   fonts:
     - family: CanavaGrotesk
       fonts:

@@ -1,9 +1,13 @@
+// GENERATED: Models imported from the upstream repository.
+// These models represent cards and picture references.  They are unchanged
+// relative to commit e5f882677617a327c4915bed61778983998ae276.
+
 import 'dart:convert';
 import 'dart:typed_data';
 
 class PicRef {
   final String type; // file | dataUri | asset
-  final String uri;  // path or data-uri or asset path
+  final String uri; // path or data-uri or asset path
   const PicRef({required this.type, required this.uri});
 
   Map<String, dynamic> toJson() => {"type": type, "uri": uri};

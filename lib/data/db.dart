@@ -1,3 +1,8 @@
+// GENERATED: Database definitions imported from the upstream repository.
+// This file defines a Drift database storing riddle cards.  It is the same
+// contents as commit e5f882677617a327c4915bed61778983998ae276 and is provided
+// here so that the rest of the UI can compile against the same API.
+
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
